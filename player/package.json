@@ -1,0 +1,41 @@
+{
+  "name": "player",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "serve": "vue-cli-service serve",
+    "build": "vue-cli-service build",
+    "lint": "vue-cli-service lint"
+  },
+  "dependencies": {
+    "@types/three": "^0.93.5",
+    "escodegen": "^1.11.0",
+    "espree": "^4.1.0",
+    "protobuf-loader": "^0.0.8",
+    "protobufjs": "^6.8.8",
+    "pug": "^2.0.3",
+    "pug-plain-loader": "^1.0.0",
+    "three": "^0.98.0",
+    "three.meshline": "^1.1.0",
+    "vue": "^2.5.17"
+  },
+  "devDependencies": {
+    "@vue/cli-plugin-babel": "^3.0.5",
+    "@vue/cli-plugin-typescript": "^3.0.5",
+    "@vue/cli-service": "^3.0.5",
+    "node-sass": "^4.9.0",
+    "sass-loader": "^7.0.1",
+    "typescript": "^3.0.0",
+    "vue-template-compiler": "^2.5.17"
+  },
+  "postcss": {
+    "plugins": {
+      "autoprefixer": {}
+    }
+  },
+  "browserslist": [
+    "> 1%",
+    "last 2 versions",
+    "not ie <= 8"
+  ]
+}
