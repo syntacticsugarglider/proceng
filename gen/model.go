@@ -8,7 +8,7 @@ import (
 
 //Box creates a box
 func Box(x, y, z float64) (vertices []float64, faces []*pb.Mesh_Face) {
-	c := fauxgl.NewSphere(3)
+	c := fauxgl.NewCube()
 	c.Transform(fauxgl.Scale(fauxgl.Vector{
 		X: x,
 		Y: y,
