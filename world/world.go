@@ -20,6 +20,7 @@ type World struct {
 	UnitScale    float64
 	Players      map[*connector.Peer]*Player
 	Simulation   *simulation.Simulation
+	Meshes       map[uint64]*pb.Mesh
 }
 
 //Chunk represents a Chunk
@@ -51,6 +52,12 @@ func New() *World {
 	w := new(World)
 	w.Chunks = make(map[int64]map[int64]map[int64]*Chunk)
 	w.Players = make(map[*connector.Peer]*Player)
+	w.Meshes = make(map[uint64]*pb.Mesh)
+	boxv, boxf := model.Box(1, 1, 1)
+	w.Meshes[1] = &pb.Mesh{
+		Vertices: boxv,
+		Faces:    boxf,
+	}
 	w.ChunkSize = 500
 	w.loadChunk(0, 0, 0)
 	ticker := time.NewTicker(time.Minute * 5)
@@ -132,6 +139,11 @@ func (w *World) parseRequest(d []byte, p *Player) {
 	}
 	if m.Type == pb.Request_MATERIAL {
 		p.Peer.SendMessage(w.streamMaterial(m.Id))
+		return
+	}
+	if m.Type == pb.Request_MESH {
+		p.Peer.SendMessage(w.streamMesh(m.Id, w.Meshes))
+		return
 	}
 }
 
@@ -179,15 +191,13 @@ func (w *World) RemovePlayer(p *connector.Peer) {
 
 //CreateEntity creates an entity
 func (w *World) CreateEntity() {
-	boxv, boxf := model.Box(1, 1, 1)
 	p := &pb.Entity{
 		Location:           &pb.RelativeLocation{X: 0, Y: 0, Z: 0},
 		Velocity:           &pb.Velocity{X: 0, Y: 0, Z: 0},
 		Rotation:           &pb.Rotation{X: 0, Y: 0, Z: 0, W: 0},
 		RotationalVelocity: &pb.Velocity{X: 0, Y: 0, Z: 0},
 		Bodies: []*pb.Body{{
-			Vertices:    boxv,
-			Faces:       boxf,
+			MeshID:      1,
 			Material:    1,
 			FlatNormals: true,
 		}},
@@ -210,25 +220,6 @@ func (w *World) CreateEntity() {
 		}, {
 			Type:      pb.Light_AMBIENT_LIGHT,
 			Intensity: 0.25,
-		}},
-	}
-	w.Chunks[0][0][0].addEntity(p)
-	w.Simulation.AddFromVEnt(p)
-}
-
-//CreateEntity2 creates an entity
-func (w *World) CreateEntity2() {
-	boxv, boxf := model.Box(1, 1, 1)
-	p := &pb.Entity{
-		Location:           &pb.RelativeLocation{X: 0, Y: 0, Z: 20},
-		Velocity:           &pb.Velocity{X: 0, Y: 0, Z: 0},
-		Rotation:           &pb.Rotation{X: 0, Y: 0, Z: 0, W: 0},
-		RotationalVelocity: &pb.Velocity{X: 0, Y: 0, Z: 0},
-		Bodies: []*pb.Body{{
-			Vertices:    boxv,
-			Faces:       boxf,
-			Material:    1,
-			FlatNormals: true,
 		}},
 	}
 	w.Chunks[0][0][0].addEntity(p)

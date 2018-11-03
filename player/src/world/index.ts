@@ -73,15 +73,15 @@ export default class World {
     );
   }
   public update = (u: Update) => {
-    this.entities[0].position.set(u.position.x, u.position.y, u.position.z);
-    this.entities[0].setRotationFromQuaternion(
+    // this.entities[0].position.set(u.position.x, u.position.y, u.position.z);
+    /*this.entities[0].setRotationFromQuaternion(
       new THREE.Quaternion(
         u.rotation.x,
         u.rotation.y,
         u.rotation.z,
         u.rotation.w
       )
-    );
+    );*/
   }
   private updateScene = () => {
     const c = this.retrieveCurrentChunk();
@@ -91,53 +91,87 @@ export default class World {
         let geometry: THREE.BufferGeometry;
         switch (body.type) {
           case 1:
-            geometry = new THREE.BoxBufferGeometry(...body.vertices);
+            geometry = new THREE.BoxBufferGeometry(...body.data);
             break;
           case 2:
-            geometry = new THREE.SphereBufferGeometry(...body.vertices);
+            geometry = new THREE.SphereBufferGeometry(...body.data);
             break;
           default:
-            const pregeo = new THREE.Geometry();
-            for (let i = 0; i < body.vertices.length; i += 3) {
-              pregeo.vertices.push(
-                new THREE.Vector3(
-                  body.vertices[i],
-                  body.vertices[i + 1],
-                  body.vertices[i + 2]
-                )
-              );
-            }
-            const uvs: any[][] = [[]];
-            let hasUvs = true;
-            if (body.faces && body.faces.length > 0) {
-              body.faces.forEach((face: any) => {
-                pregeo.faces.push(new THREE.Face3(face.a, face.b, face.c));
-                if (face.uvs && face.uvs.length > 0) {
-                  const k = [];
-                  for (let i = 0; i < face.uvs.length; i += 2) {
-                    k.push(new THREE.Vector2(face.uvs[i], face.uvs[i + 1]));
-                  }
-                  uvs[0].push(k);
-                } else {
-                  hasUvs = false;
+            this.resources.getMesh(
+              body.meshID,
+              body,
+              (m: resources.Mesh, body: any) => {
+                const pregeo = new THREE.Geometry();
+                for (let i = 0; i < m.vertices.length; i += 3) {
+                  pregeo.vertices.push(
+                    new THREE.Vector3(
+                      m.vertices[i],
+                      m.vertices[i + 1],
+                      m.vertices[i + 2]
+                    )
+                  );
                 }
-              });
-            } else {
-              return;
-            }
-            if (hasUvs) {
-              pregeo.faceVertexUvs = uvs;
-              pregeo.uvsNeedUpdate = true;
-            } else {
-              assignUVs(pregeo);
-            }
-            pregeo.computeFaceNormals();
-            if (body.flatNormals) {
-              pregeo.computeFlatVertexNormals();
-            } else {
-              pregeo.computeVertexNormals();
-            }
-            geometry = new THREE.BufferGeometry().fromGeometry(pregeo);
+                const uvs: any[][] = [[]];
+                let hasUvs = true;
+                if (m.faces && m.faces.length > 0) {
+                  m.faces.forEach((face: any) => {
+                    pregeo.faces.push(new THREE.Face3(face.a, face.b, face.c));
+                    if (face.uvs && face.uvs.length > 0) {
+                      const k = [];
+                      for (let i = 0; i < face.uvs.length; i += 2) {
+                        k.push(new THREE.Vector2(face.uvs[i], face.uvs[i + 1]));
+                      }
+                      uvs[0].push(k);
+                    } else {
+                      hasUvs = false;
+                    }
+                  });
+                } else {
+                  return;
+                }
+                if (hasUvs) {
+                  pregeo.faceVertexUvs = uvs;
+                  pregeo.uvsNeedUpdate = true;
+                } else {
+                  assignUVs(pregeo);
+                }
+                pregeo.computeFaceNormals();
+                if (body.flatNormals) {
+                  pregeo.computeFlatVertexNormals();
+                } else {
+                  pregeo.computeVertexNormals();
+                }
+                geometry = new THREE.BufferGeometry().fromGeometry(pregeo);
+                const mesh = new THREE.Mesh(
+                  geometry,
+                  new THREE.MeshBasicMaterial({ color: '#fff' })
+                );
+                if (body.offset) {
+                  mesh.position.x = body.offset.x;
+                  mesh.position.y = body.offset.y;
+                  mesh.position.z = body.offset.z;
+                }
+                if (body.rotation) {
+                  mesh.setRotationFromQuaternion(
+                    new THREE.Quaternion(
+                      body.rotation.x,
+                      body.rotation.y,
+                      body.rotation.z,
+                      body.rotation.w
+                    )
+                  );
+                }
+                this.resources.getMaterial(
+                  body.material,
+                  (m: THREE.Material) => {
+                    mesh.material = m;
+                  }
+                );
+                this.entities.push(e);
+                e.add(mesh);
+              }
+            );
+            return;
         }
         const mesh = new THREE.Mesh(
           geometry,

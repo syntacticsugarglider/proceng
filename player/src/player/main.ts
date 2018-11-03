@@ -138,6 +138,7 @@ export default class Player {
   }
   private recvData = (message: MessageEvent) => {
     const resp: any = this.proto.Response!.decode(new Uint8Array(message.data));
+    console.log(resp);
     switch (resp.type) {
       case 2:
         this.world!.assignChunk(resp.chunk);

@@ -28,30 +28,22 @@ message Material {
   Side side = 4;
 }
 message Body {
-  repeated double vertices = 1;
+  repeated double data = 1;
   uint64 material = 2;
   enum Type {
     MESH = 0;
     BOX = 1;
     SPHERE = 2;
   }
-  message Face {
-    uint64 a = 1;
-    uint64 b = 2;
-    uint64 c = 3;
-    repeated double uvs = 4;
-  }
   Type type = 3;
   RelativeLocation offset = 4;
   Rotation rotation = 5;
-  repeated Face faces = 6;
   bool flatNormals = 7;
+  uint64 meshID = 8;
 }
 
 message Texture {
   bytes data = 1;
-  uint64 parts = 2;
-  uint64 part = 3;
 }
 
 message Request {
@@ -59,9 +51,21 @@ message Request {
     TEXTURE = 0;
     AUDIO = 1;
     MATERIAL = 2;
+    MESH = 3;
   }
   uint64 id = 2;
   Type type = 1;
+}
+
+message Mesh {
+  message Face {
+    uint64 a = 1;
+    uint64 b = 2;
+    uint64 c = 3;
+    repeated double uvs = 4;
+  }
+  repeated double vertices = 1;
+  repeated Face faces = 2;
 }
 
 message Response {
@@ -70,12 +74,16 @@ message Response {
     AUDIO = 1;
     CHUNK = 2;
     MATERIAL = 3;
+    MESH = 4;
   }
   Type type = 1;
   uint64 id = 2;
   Texture texture = 3;
-  Chunk chunk = 4;
-  Material material = 5;
+  uint64 parts = 4;
+  uint64 part = 5;
+  Chunk chunk = 6;
+  Material material = 7;
+  Mesh mesh = 8;
 }
 
 message Light {

@@ -94,11 +94,11 @@ func (w *World) streamTexture(id uint64) [][]byte {
 			p, e := proto.Marshal(&pb.Response{
 				Type: pb.Response_TEXTURE,
 				Texture: &pb.Texture{
-					Data:  batch,
-					Parts: kt,
-					Part:  uint64(i / connector.MaxStreamChunkSize),
+					Data: batch,
 				},
-				Id: id,
+				Parts: kt,
+				Part:  uint64(i / connector.MaxStreamChunkSize),
+				Id:    id,
 			})
 			if e == nil {
 				ks = append(ks, p)
@@ -118,5 +118,10 @@ func (w *World) streamTexture(id uint64) [][]byte {
 
 func (w *World) streamMaterial(id uint64) []byte {
 	k, _ := proto.Marshal(&pb.Response{Id: id, Type: pb.Response_MATERIAL, Material: assets.Material.ByID(id)})
+	return k
+}
+
+func (w *World) streamMesh(id uint64, meshes map[uint64]*pb.Mesh) []byte {
+	k, _ := proto.Marshal(&pb.Response{Id: id, Type: pb.Response_MESH, Mesh: meshes[id]})
 	return k
 }
