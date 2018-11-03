@@ -241,7 +241,9 @@ func (w *World) sendUpdates() {
 		}
 		for _, p := range chunk.Players {
 			for _, u := range updates {
-				go p.Peer.SendUpdate(u)
+				go func(k []byte) {
+					p.Peer.SendUpdate(k)
+				}(u)
 			}
 		}
 	}

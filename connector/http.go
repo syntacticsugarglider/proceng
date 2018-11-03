@@ -158,7 +158,9 @@ func (p *Peer) SendMessage(data []byte) {
 
 //SendUpdate sends an update to a peer
 func (p *Peer) SendUpdate(data []byte) {
-	p.updateChannelPtr.Send(datachannel.PayloadBinary{
-		Data: data,
-	})
+	if p.updateChannelPtr != nil {
+		p.updateChannelPtr.Send(datachannel.PayloadBinary{
+			Data: data,
+		})
+	}
 }
