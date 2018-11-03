@@ -12,6 +12,7 @@ class Chunk {}
 export default class World {
   public resources: resources.Manager;
   private chunks: Map<number, Map<number, Map<number, Chunk>>>;
+  private entities: THREE.Object3D[];
   private scene: THREE.Scene;
   private camera: THREE.Camera;
   private currentLocation: [number, number, number];
@@ -24,6 +25,7 @@ export default class World {
     this.proto = p;
     this.rtc = r;
     this.camera = c;
+    this.entities = [];
     this.resources = new resources.Manager(this.proto, this.rtc);
   }
   public assignChunk = (c: any) => {
@@ -70,7 +72,17 @@ export default class World {
       this.currentLocation[2]
     );
   }
-  public update = (u: Update) => {};
+  public update = (u: Update) => {
+    this.entities[0].position.set(u.position.x, u.position.y, u.position.z);
+    this.entities[0].setRotationFromQuaternion(
+      new THREE.Quaternion(
+        u.rotation.x,
+        u.rotation.y,
+        u.rotation.z,
+        u.rotation.w
+      )
+    );
+  }
   private updateScene = () => {
     const c = this.retrieveCurrentChunk();
     c!.entities.forEach((entity) => {
@@ -137,13 +149,19 @@ export default class World {
           mesh.position.z = body.offset.z;
         }
         if (body.rotation) {
-          mesh.rotation.x = body.rotation.x;
-          mesh.rotation.y = body.rotation.y;
-          mesh.rotation.z = body.rotation.z;
+          mesh.setRotationFromQuaternion(
+            new THREE.Quaternion(
+              body.rotation.x,
+              body.rotation.y,
+              body.rotation.z,
+              body.rotation.w
+            )
+          );
         }
         this.resources.getMaterial(body.material, (m: THREE.Material) => {
           mesh.material = m;
         });
+        this.entities.push(e);
         e.add(mesh);
       });
       if (entity.lights) {
@@ -167,9 +185,14 @@ export default class World {
             l.position.z = light.position.z;
           }
           if (light.rotation) {
-            l.rotation.x = light.rotation.x;
-            l.rotation.y = light.rotation.y;
-            l.rotation.z = light.rotation.z;
+            l.setRotationFromQuaternion(
+              new THREE.Quaternion(
+                light.rotation.x,
+                light.rotation.y,
+                light.rotation.z,
+                light.rotation.w
+              )
+            );
           }
           e.add(l);
         });
@@ -180,9 +203,14 @@ export default class World {
         e.position.z = entity.location.z;
       }
       if (entity.rotation) {
-        e.rotation.x = entity.rotation.x;
-        e.rotation.y = entity.rotation.y;
-        e.rotation.z = entity.rotation.z;
+        e.setRotationFromQuaternion(
+          new THREE.Quaternion(
+            entity.rotation.x,
+            entity.rotation.y,
+            entity.rotation.z,
+            entity.rotation.w
+          )
+        );
       }
       this.scene.add(e);
     });

@@ -52,6 +52,7 @@ export class Manager {
   private materials: Map<number, THREE.Material>;
   private incompleteTextures: Map<number, IncompleteTexture>;
   private materialCallbacks: Map<number, Array<(m: THREE.Material) => void>>;
+  private antiCallDuplicateMaterials: Map<number, boolean>;
   private proto: Proto;
   private rtc: RTC;
   constructor(p: Proto, r: RTC) {
@@ -63,6 +64,7 @@ export class Manager {
       Array<(m: THREE.Material) => void>
     >();
     this.textures = new Map<number, THREE.Texture>();
+    this.antiCallDuplicateMaterials = new Map<number, boolean>();
     this.incompleteTextures = new Map<number, IncompleteTexture>();
   }
   public getTexture = (id: number) => {
@@ -95,16 +97,19 @@ export class Manager {
       this.materialCallbacks.set(id, []);
     }
     this.materialCallbacks.get(id)!.push(callback);
-    this.rtc.sendMessage(
-      this.proto
-        .Response!.encode(
-          this.proto.Response!.fromObject({
-            type: 2,
-            id
-          })
-        )
-        .finish()
-    );
+    if (!this.antiCallDuplicateMaterials.has(id)) {
+      this.rtc.sendMessage(
+        this.proto
+          .Response!.encode(
+            this.proto.Response!.fromObject({
+              type: 2,
+              id
+            })
+          )
+          .finish()
+      );
+    }
+    this.antiCallDuplicateMaterials.set(id, true);
   }
   public handleRequestResponse = (message: Response) => {
     switch (message.type) {

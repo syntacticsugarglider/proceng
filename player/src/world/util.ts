@@ -58,5 +58,15 @@ export function assignUVs(geometry: THREE.Geometry) {
 }
 export interface Update {
   type: number;
-  position: number[];
+  position: {
+    x: number;
+    y: number;
+    z: number;
+  };
+  rotation: {
+    x: number;
+    y: number;
+    z: number;
+    w: number;
+  };
 }

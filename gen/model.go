@@ -6,13 +6,13 @@ import (
 	"github.com/fogleman/fauxgl"
 )
 
-//Cylinder creates a cylinder
-func Cylinder() (vertices []float64, faces []*pb.Body_Face) {
-	c := fauxgl.NewCylinder(4, true)
+//Box creates a box
+func Box(x, y, z float64) (vertices []float64, faces []*pb.Body_Face) {
+	c := fauxgl.NewCube()
 	c.Transform(fauxgl.Scale(fauxgl.Vector{
-		X: 1,
-		Y: 1,
-		Z: 5,
+		X: x,
+		Y: y,
+		Z: z,
 	}))
 	return convertMesh(c)
 }

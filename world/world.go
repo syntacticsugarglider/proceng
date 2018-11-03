@@ -1,13 +1,11 @@
 package world
 
 import (
-	"goworld/assets"
 	"goworld/connector"
 	"goworld/gen"
 	"goworld/logging"
 	"goworld/pb"
 	"goworld/simulation"
-	"log"
 	"sync"
 	"time"
 
@@ -26,44 +24,12 @@ type World struct {
 
 //Chunk represents a Chunk
 type Chunk struct {
-	Entities  []*pb.Entity
-	SEntities []*simulation.Entity
-	Players   map[*connector.Peer]*Player
+	Entities     []*pb.Entity
+	Players      map[*connector.Peer]*Player
+	PlayersMutex *sync.Mutex
 }
 
 var playersMutex = new(sync.Mutex)
-
-//Voxel creates a voxel
-func (w *World) Voxel() *pb.Entity {
-	v, f := model.Cylinder()
-	return &pb.Entity{
-		Location: &pb.RelativeLocation{
-			X: 0,
-			Y: 0,
-			Z: 0,
-		},
-		Bodies: []*pb.Body{{
-			Type:        pb.Body_MESH,
-			Vertices:    v,
-			Faces:       f,
-			Material:    assets.Material.Stone,
-			FlatNormals: true,
-		}},
-		Lights: []*pb.Light{{
-			Color:     "#fff",
-			Intensity: 1,
-			Position: &pb.RelativeLocation{
-				X: -3,
-				Y: 10,
-				Z: 10,
-			},
-		}, {
-			Type:      pb.Light_AMBIENT_LIGHT,
-			Color:     "#fff",
-			Intensity: 0.5,
-		}},
-	}
-}
 
 func (w *World) streamChunk(x int64, y int64, z int64) ([]byte, error) {
 	c := w.loadChunk(x, y, z)
@@ -86,7 +52,7 @@ func New() *World {
 	w.Chunks = make(map[int64]map[int64]map[int64]*Chunk)
 	w.Players = make(map[*connector.Peer]*Player)
 	w.ChunkSize = 500
-	w.loadChunk(0, 0, 0).addEntity(w.Voxel())
+	w.loadChunk(0, 0, 0)
 	ticker := time.NewTicker(time.Minute * 5)
 	go func() {
 		for {
@@ -98,11 +64,13 @@ func New() *World {
 	}()
 	w.Simulation = simulation.InitializeSimulation()
 	simtick := time.NewTicker(time.Second / 60)
+	w.CreateEntity()
 	go func() {
 		for {
 			select {
 			case <-simtick.C:
 				w.Simulation.Step()
+				w.sendUpdates()
 			}
 		}
 	}()
@@ -139,13 +107,14 @@ func (c *Chunk) addEntity(e *pb.Entity) {
 
 func (w *World) createChunk(x int64, y int64, z int64) {
 	c := new(Chunk)
+	c.PlayersMutex = &sync.Mutex{}
+	c.Players = make(map[*connector.Peer]*Player)
 	w.assignChunk(x, y, z, c)
 }
 
 func (w *World) parseUpdate(d []byte, p *Player) {
 	u := new(pb.Update)
 	proto.Unmarshal(d, u)
-	log.Println(u)
 }
 
 func (w *World) parseRequest(d []byte, p *Player) {
@@ -179,6 +148,10 @@ func (w *World) AddPlayer(p *connector.Peer) {
 	k.AbsoluteX = 0
 	k.AbsoluteY = 0
 	k.AbsoluteZ = 0
+	c := w.loadChunk(0, 0, 0)
+	c.PlayersMutex.Lock()
+	defer c.PlayersMutex.Unlock()
+	c.Players[k.Peer] = k
 	l, err := w.streamChunk(0, 0, 0)
 	if err == nil {
 		p.SendMessage(l)
@@ -202,4 +175,81 @@ func (w *World) RemovePlayer(p *connector.Peer) {
 		delete(w.Chunks[w.Players[p].AbsoluteX][w.Players[p].AbsoluteY][w.Players[p].AbsoluteZ].Players, w.Players[p].Peer)
 		delete(w.Players, p)
 	}()
+}
+
+//CreateEntity creates an entity
+func (w *World) CreateEntity() {
+	boxv, boxf := model.Box(1, 1, 1)
+	p := &pb.Entity{
+		Location:           &pb.RelativeLocation{X: 0, Y: 0, Z: 0},
+		Velocity:           &pb.Velocity{X: 0, Y: 0, Z: 0},
+		Rotation:           &pb.Rotation{X: 0, Y: 0, Z: 0, W: 0},
+		RotationalVelocity: &pb.Velocity{X: 0, Y: 0, Z: 0},
+		Bodies: []*pb.Body{{
+			Vertices:    boxv,
+			Faces:       boxf,
+			Material:    1,
+			FlatNormals: true,
+		}},
+		Lights: []*pb.Light{{
+			Position: &pb.RelativeLocation{
+				X: 2,
+				Y: -2,
+				Z: 2,
+			},
+			Intensity: 0.6,
+			Type:      pb.Light_POINT_LIGHT,
+		}, {
+			Position: &pb.RelativeLocation{
+				X: -2,
+				Y: -2,
+				Z: 2,
+			},
+			Intensity: 0.8,
+			Type:      pb.Light_POINT_LIGHT,
+		}, {
+			Type:      pb.Light_AMBIENT_LIGHT,
+			Intensity: 0.25,
+		}},
+	}
+	w.Chunks[0][0][0].addEntity(p)
+	w.Simulation.AddFromVEnt(p)
+}
+
+//CreateEntity2 creates an entity
+func (w *World) CreateEntity2() {
+	boxv, boxf := model.Box(1, 1, 1)
+	p := &pb.Entity{
+		Location:           &pb.RelativeLocation{X: 0, Y: 0, Z: 20},
+		Velocity:           &pb.Velocity{X: 0, Y: 0, Z: 0},
+		Rotation:           &pb.Rotation{X: 0, Y: 0, Z: 0, W: 0},
+		RotationalVelocity: &pb.Velocity{X: 0, Y: 0, Z: 0},
+		Bodies: []*pb.Body{{
+			Vertices:    boxv,
+			Faces:       boxf,
+			Material:    1,
+			FlatNormals: true,
+		}},
+	}
+	w.Chunks[0][0][0].addEntity(p)
+	w.Simulation.AddFromVEnt(p)
+}
+
+func (w *World) sendUpdates() {
+	for _, c := range w.LoadedChunks {
+		chunk := w.Chunks[c[0]][c[1]][c[2]]
+		updates := [][]byte{}
+		for _, e := range chunk.Entities {
+			b, _ := proto.Marshal(&pb.Update{
+				Position: e.Location,
+				Rotation: e.Rotation,
+			})
+			updates = append(updates, b)
+		}
+		for _, p := range chunk.Players {
+			for _, u := range updates {
+				go p.Peer.SendUpdate(u)
+			}
+		}
+	}
 }

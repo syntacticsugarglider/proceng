@@ -12,7 +12,7 @@ type Simulation struct {
 	space ode.Space
 	cgrp  ode.JointGroup
 	cb    func(data interface{}, obj1, obj2 ode.Geom)
-	body  ode.Body
+	ents  []*entity
 }
 
 //InitializeSimulation initializes the simulation
@@ -36,9 +36,23 @@ func (s *Simulation) Step() {
 	s.space.Collide(0, s.cb)
 	s.world.QuickStep(stepSize)
 	s.cgrp.Empty()
-}
-
-//Add adds a body to the simulation
-func (s *Simulation) Add() {
-
+	for _, e := range s.ents {
+		p := e.Body.Position()
+		e.VEnt.Location.X = p[0]
+		e.VEnt.Location.Y = p[1]
+		e.VEnt.Location.Z = p[2]
+		lv := e.Body.LinearVelocity()
+		e.VEnt.Velocity.X = float32(lv[0])
+		e.VEnt.Velocity.Y = float32(lv[1])
+		e.VEnt.Velocity.Z = float32(lv[2])
+		av := e.Body.AngularVel()
+		e.VEnt.RotationalVelocity.X = float32(av[0])
+		e.VEnt.RotationalVelocity.Y = float32(av[1])
+		e.VEnt.RotationalVelocity.Z = float32(av[2])
+		q := e.Body.Quaternion()
+		e.VEnt.Rotation.X = float32(q[0])
+		e.VEnt.Rotation.Y = float32(q[1])
+		e.VEnt.Rotation.Z = float32(q[2])
+		e.VEnt.Rotation.W = float32(q[3])
+	}
 }

@@ -104,8 +104,10 @@ message Light {
 message Entity {
   RelativeLocation location = 1;
   Rotation rotation = 2;
-  repeated Body bodies = 3;
-  repeated Light lights = 4;
+  Velocity velocity = 3;
+  Velocity rotationalVelocity = 4;
+  repeated Body bodies = 5;
+  repeated Light lights = 6;
 }
 
 message Chunk {
@@ -120,6 +122,13 @@ message RelativeLocation {
 }
 
 message Rotation {
+  float x = 1;
+  float y = 2;
+  float z = 3;
+  float w = 4;
+}
+
+message Velocity {
   float x = 1;
   float y = 2;
   float z = 3;
@@ -143,4 +152,6 @@ message Update {
   Type type = 1;
   RelativeLocation position = 2;
   Rotation rotation = 3;
+  Velocity velocity = 4;
+  Velocity rotationalVelocity = 5;
 }
