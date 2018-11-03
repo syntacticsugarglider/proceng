@@ -142,7 +142,9 @@ func (w *World) parseRequest(d []byte, p *Player) {
 		return
 	}
 	if m.Type == pb.Request_MESH {
-		p.Peer.SendMessage(w.streamMesh(m.Id, w.Meshes))
+		for _, m := range w.streamMesh(m.Id, w.Meshes) {
+			p.Peer.SendMessage(m)
+		}
 		return
 	}
 }

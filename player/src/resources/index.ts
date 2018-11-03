@@ -23,7 +23,7 @@ interface Response {
   };
   parts: number;
   part: number;
-  mesh: Mesh;
+  meshData: Uint8Array;
   material: Material;
   type: number;
   id: number;
@@ -49,6 +49,27 @@ class IncompleteTexture {
     return this.buffer;
   }
 }
+class IncompleteMesh {
+  private buffer: Uint8Array[];
+  private items: number;
+  constructor(a: Response) {
+    this.buffer = new Array(a.parts);
+    this.buffer[a.part] = a.meshData;
+    this.items = 1;
+  }
+  public full = () => {
+    return this.buffer.length === this.items;
+  }
+  public add = (a: Response) => {
+    if (typeof this.buffer[a.part] === 'undefined') {
+      this.items++;
+    }
+    this.buffer[a.part] = a.meshData;
+  }
+  public get = () => {
+    return this.buffer;
+  }
+}
 
 export interface Mesh {
   vertices: number[];
@@ -65,6 +86,7 @@ export class Manager {
   private meshes: Map<number, Mesh>;
   private materials: Map<number, THREE.Material>;
   private incompleteTextures: Map<number, IncompleteTexture>;
+  private incompleteMeshes: Map<number, IncompleteMesh>;
   private materialCallbacks: Map<number, Array<(m: THREE.Material) => void>>;
   private meshCallbacks: Map<number, MeshCallback[]>;
   private antiCallDuplicateMaterials: Map<number, boolean>;
@@ -84,6 +106,7 @@ export class Manager {
     this.antiCallDuplicateMaterials = new Map<number, boolean>();
     this.antiCallDuplicateMeshes = new Map<number, boolean>();
     this.incompleteTextures = new Map<number, IncompleteTexture>();
+    this.incompleteMeshes = new Map<number, IncompleteMesh>();
     this.meshes = new Map<number, Mesh>();
   }
   public getTexture = (id: number) => {
@@ -161,11 +184,37 @@ export class Manager {
   public handleRequestResponse = (message: Response) => {
     switch (message.type) {
       case 4:
-        this.meshes.set(message.id, message.mesh);
-        this.meshCallbacks
-          .get(message.id)!
-          .forEach((d) => d.cb(message.mesh, d.bd));
-        this.meshCallbacks.delete(message.id);
+        if (!message.parts) {
+          const mesh = (this.proto.Mesh!.decode(
+            message.meshData
+          ) as unknown) as Mesh;
+          this.meshes.set(message.id, mesh);
+          this.meshCallbacks.get(message.id)!.forEach((d) => d.cb(mesh, d.bd));
+          this.meshCallbacks.delete(message.id);
+        } else {
+          if (this.incompleteMeshes.has(message.id)) {
+            this.incompleteMeshes.get(message.id)!.add(message);
+          } else {
+            this.incompleteMeshes.set(message.id, new IncompleteMesh(message));
+          }
+          if (this.incompleteMeshes.get(message.id)!.full()) {
+            const data = this.incompleteMeshes.get(message.id)!.get();
+            let tlen: number = 0;
+            data.forEach((buffer) => {
+              tlen = tlen + buffer.byteLength;
+            });
+            const tmp = new Uint8Array(tlen);
+            let offset: number = 0;
+            data.forEach((buffer) => {
+              tmp.set(new Uint8Array(buffer), offset);
+              offset = offset + buffer.byteLength;
+            });
+            const mesh = (this.proto.Mesh!.decode(tmp) as unknown) as Mesh;
+            this.meshes.set(message.id, mesh);
+            this.meshCallbacks.get(message.id)!.forEach((d) => d.cb(mesh, d.bd));
+            this.meshCallbacks.delete(message.id);
+          }
+        }
         break;
       case 3:
         const material = message.material;

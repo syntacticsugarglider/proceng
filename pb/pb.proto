@@ -83,7 +83,7 @@ message Response {
   uint64 part = 5;
   Chunk chunk = 6;
   Material material = 7;
-  Mesh mesh = 8;
+  bytes meshData = 8;
 }
 
 message Light {

@@ -121,7 +121,29 @@ func (w *World) streamMaterial(id uint64) []byte {
 	return k
 }
 
-func (w *World) streamMesh(id uint64, meshes map[uint64]*pb.Mesh) []byte {
-	k, _ := proto.Marshal(&pb.Response{Id: id, Type: pb.Response_MESH, Mesh: meshes[id]})
-	return k
+func (w *World) streamMesh(id uint64, meshes map[uint64]*pb.Mesh) [][]byte {
+	m, _ := proto.Marshal(meshes[id])
+	if len(m) > connector.MaxStreamChunkSize {
+		ks := [][]byte{}
+		kt := uint64(len(m) / connector.MaxStreamChunkSize)
+		if len(m)%connector.MaxStreamChunkSize > 0 {
+			kt++
+		}
+		for i := 0; i < len(m); i += connector.MaxStreamChunkSize {
+			batch := m[i:min(i+connector.MaxStreamChunkSize, len(m))]
+			p, e := proto.Marshal(&pb.Response{
+				Type:     pb.Response_MESH,
+				MeshData: batch,
+				Parts:    kt,
+				Part:     uint64(i / connector.MaxStreamChunkSize),
+				Id:       id,
+			})
+			if e == nil {
+				ks = append(ks, p)
+			}
+		}
+		return ks
+	}
+	k, _ := proto.Marshal(&pb.Response{Id: id, Type: pb.Response_MESH, MeshData: m})
+	return [][]byte{k}
 }
