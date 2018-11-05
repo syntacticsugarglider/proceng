@@ -16,8 +16,6 @@ import (
 type World struct {
 	Chunks       map[int64]map[int64]map[int64]*Chunk
 	LoadedChunks [][3]int64
-	ChunkSize    int32
-	UnitScale    float64
 	Players      map[*connector.Peer]*Player
 	Simulation   *simulation.Simulation
 	Meshes       map[uint64]*pb.Mesh
@@ -28,6 +26,7 @@ type Chunk struct {
 	Entities     []*pb.Entity
 	Players      map[*connector.Peer]*Player
 	PlayersMutex *sync.Mutex
+	Size         [2]float64
 }
 
 var playersMutex = new(sync.Mutex)
@@ -58,7 +57,6 @@ func New() *World {
 		Vertices: boxv,
 		Faces:    boxf,
 	}
-	w.ChunkSize = 500
 	w.loadChunk(0, 0, 0)
 	ticker := time.NewTicker(time.Minute * 5)
 	go func() {
