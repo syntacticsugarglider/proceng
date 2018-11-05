@@ -111,16 +111,22 @@ message Light {
 
 message Entity {
   RelativeLocation location = 1;
-  Rotation rotation = 2;
-  Velocity velocity = 3;
-  Velocity rotationalVelocity = 4;
-  repeated Body bodies = 5;
-  repeated Light lights = 6;
+  uint64 id = 2;
+  Rotation rotation = 3;
+  Velocity velocity = 4;
+  Velocity rotationalVelocity = 5;
+  repeated Body bodies = 6;
+  repeated Light lights = 7;
 }
 
 message Chunk {
   AbsoluteLocation location = 1;
   repeated Entity entities = 2;
+}
+
+message EntityID {
+  AbsoluteLocation location = 1;
+  uint64 id = 2;
 }
 
 message RelativeLocation {
@@ -158,8 +164,9 @@ message Update {
     LOC = 0;
   }
   Type type = 1;
-  RelativeLocation position = 2;
-  Rotation rotation = 3;
-  Velocity velocity = 4;
-  Velocity rotationalVelocity = 5;
+  EntityID entity = 2;
+  RelativeLocation position = 3;
+  Rotation rotation = 4;
+  Velocity velocity = 5;
+  Velocity rotationalVelocity = 6;
 }

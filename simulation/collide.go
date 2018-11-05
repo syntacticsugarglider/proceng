@@ -1,6 +1,8 @@
 package simulation
 
-import "github.com/nobonobo/ode"
+import (
+	"github.com/nobonobo/ode"
+)
 
 func (s *Simulation) makeCallback() func(data interface{}, obj1, obj2 ode.Geom) {
 	return func(data interface{}, obj1, obj2 ode.Geom) {

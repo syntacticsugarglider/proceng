@@ -6,40 +6,100 @@ import { assignUVs, Update } from './util';
 
 interface Chunk {
   entities: any[];
+  location: {
+    x: number;
+    y: number;
+    z: number;
+  };
+}
+interface Entity {}
+interface EData {
+  velocity: {
+    x: number;
+    y: number;
+    z: number;
+  };
+  angularVelocity: {
+    x: number;
+    y: number;
+    z: number;
+  };
 }
 class Chunk {}
+class EData {
+  public velocity: {
+    x: number;
+    y: number;
+    z: number;
+  };
+  public angularVelocity: {
+    x: number;
+    y: number;
+    z: number;
+  };
+  constructor() {
+    this.velocity = {
+      x: 0,
+      y: 0,
+      z: 0
+    };
+    this.angularVelocity = {
+      x: 0,
+      y: 0,
+      z: 0
+    };
+  }
+}
 
 export default class World {
   public resources: resources.Manager;
-  private chunks: Map<number, Map<number, Map<number, Chunk>>>;
-  private entities: THREE.Object3D[];
+  private chunks: Map<
+    number,
+    Map<number, Map<number, [Chunk, Map<number, [Entity, EData]>]>>
+  >;
   private scene: THREE.Scene;
   private camera: THREE.Camera;
   private currentLocation: [number, number, number];
   private proto: Proto;
   private rtc: RTC;
   constructor(s: THREE.Scene, c: THREE.Camera, p: Proto, r: RTC) {
-    this.chunks = new Map<number, Map<number, Map<number, Chunk>>>();
+    this.chunks = new Map<
+      number,
+      Map<number, Map<number, [Chunk, Map<number, [Entity, EData]>]>>
+    >();
     this.currentLocation = [0, 0, 0];
     this.scene = s;
     this.proto = p;
     this.rtc = r;
     this.camera = c;
-    this.entities = [];
     this.resources = new resources.Manager(this.proto, this.rtc);
   }
-  public assignChunk = (c: any) => {
-    const x = c.location.Y || 0;
-    const y = c.location.Y || 0;
-    const z = c.location.Z || 0;
+  public animate(delta: number) {
+    const ents = this.retrieveCurrentChunk()![1];
+    ents.forEach((ent) => {
+      (ent[0] as THREE.Object3D).position.x += ent[1].velocity.x * delta;
+      (ent[0] as THREE.Object3D).position.y += ent[1].velocity.y * delta;
+      (ent[0] as THREE.Object3D).position.z += ent[1].velocity.z * delta;
+      (ent[0] as THREE.Object3D).rotation.x += ent[1].angularVelocity.x * delta;
+      (ent[0] as THREE.Object3D).rotation.y += ent[1].angularVelocity.y * delta;
+      (ent[0] as THREE.Object3D).rotation.z += ent[1].angularVelocity.z * delta;
+    });
+  }
+  public assignChunk = (c: Chunk) => {
+    const x = c.location.x || 0;
+    const y = c.location.y || 0;
+    const z = c.location.z || 0;
     if (!this.chunks.has(x)) {
-      this.chunks.set(x, new Map<number, Map<number, Chunk>>());
+      this.chunks.set(
+        x,
+        new Map<number, Map<number, [Chunk, Map<number, [Entity, EData]>]>>()
+      );
     }
     const xs = this.chunks.get(x)!;
     if (!xs.has(y)) {
-      xs.set(y, new Map<number, Chunk>());
+      xs.set(y, new Map<number, [Chunk, Map<number, [Entity, EData]>]>());
     }
-    xs.get(y)!.set(z, c);
+    xs.get(y)!.set(z, [c, new Map<number, [Entity, EData]>()]);
     if (
       x === this.currentLocation[0] &&
       y === this.currentLocation[1] &&
@@ -53,15 +113,18 @@ export default class World {
   }
   public retrieveChunk = (x: number, y: number, z: number) => {
     if (!this.chunks.has(x)) {
-      this.chunks.set(x, new Map<number, Map<number, Chunk>>());
+      this.chunks.set(
+        x,
+        new Map<number, Map<number, [Chunk, Map<number, [Entity, EData]>]>>()
+      );
     }
     const xs = this.chunks.get(x)!;
     if (!xs.has(y)) {
-      xs.set(y, new Map<number, Chunk>());
+      xs.set(y, new Map<number, [Chunk, Map<number, [Entity, EData]>]>());
     }
     const ys = xs.get(y)!;
     if (!ys.has(z)) {
-      ys.set(z, new Chunk());
+      ys.set(z, [new Chunk(), new Map<number, [Entity, EData]>()]);
     }
     return ys.get(z);
   }
@@ -73,19 +136,31 @@ export default class World {
     );
   }
   public update = (u: Update) => {
-    // this.entities[0].position.set(u.position.x, u.position.y, u.position.z);
-    /*this.entities[0].setRotationFromQuaternion(
+    const ent = this.retrieveCurrentChunk()![1].get(
+      u.entity.id || 0
+    )![0] as THREE.Object3D;
+    const data = this.retrieveCurrentChunk()![1].get(u.entity.id || 0)![1];
+    ent.position.x = u.position.x;
+    ent.position.y = u.position.y;
+    ent.position.z = u.position.z;
+    ent.rotation.setFromQuaternion(
       new THREE.Quaternion(
         u.rotation.x,
         u.rotation.y,
         u.rotation.z,
         u.rotation.w
       )
-    );*/
+    );
+    data.velocity.x = u.velocity.x;
+    data.velocity.y = u.velocity.y;
+    data.velocity.z = u.velocity.z;
+    data.angularVelocity.x = u.rotationalVelocity.x;
+    data.angularVelocity.y = u.rotationalVelocity.y;
+    data.angularVelocity.z = u.rotationalVelocity.z;
   }
   private updateScene = () => {
     const c = this.retrieveCurrentChunk();
-    c!.entities.forEach((entity) => {
+    c![0].entities.forEach((entity) => {
       const e = new THREE.Object3D();
       entity.bodies.forEach((body: any) => {
         let geometry: THREE.BufferGeometry;
@@ -167,7 +242,6 @@ export default class World {
                     mesh.material = m;
                   }
                 );
-                this.entities.push(e);
                 e.add(mesh);
               }
             );
@@ -175,7 +249,7 @@ export default class World {
         }
         const mesh = new THREE.Mesh(
           geometry,
-          new THREE.MeshBasicMaterial({ color: '#fff' })
+          new THREE.MeshBasicMaterial({ color: '#000' })
         );
         if (body.offset) {
           mesh.position.x = body.offset.x;
@@ -195,7 +269,6 @@ export default class World {
         this.resources.getMaterial(body.material, (m: THREE.Material) => {
           mesh.material = m;
         });
-        this.entities.push(e);
         e.add(mesh);
       });
       if (entity.lights) {
@@ -246,6 +319,7 @@ export default class World {
           )
         );
       }
+      c![1].set(entity.id || 0, [e, new EData()]);
       this.scene.add(e);
     });
   }

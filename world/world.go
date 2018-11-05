@@ -70,6 +70,7 @@ func New() *World {
 	w.Simulation = simulation.InitializeSimulation()
 	simtick := time.NewTicker(time.Second / 60)
 	w.CreateEntity()
+	w.CreateEntity2()
 	go func() {
 		for {
 			select {
@@ -102,11 +103,20 @@ func (w *World) loadChunk(x int64, y int64, z int64) *Chunk {
 	if w.Chunks[x][y][z] == nil {
 		w.createChunk(x, y, z)
 	}
-	w.LoadedChunks = append(w.LoadedChunks, [3]int64{x, y, z})
+	a := true
+	for _, c := range w.LoadedChunks {
+		if c[0] != x || c[1] != y || c[2] != z {
+			a = false
+		}
+	}
+	if a {
+		w.LoadedChunks = append(w.LoadedChunks, [3]int64{x, y, z})
+	}
 	return w.Chunks[x][y][z]
 }
 
 func (c *Chunk) addEntity(e *pb.Entity) {
+	e.Id = uint64(len(c.Entities))
 	c.Entities = append(c.Entities, e)
 }
 
@@ -193,9 +203,9 @@ func (w *World) RemovePlayer(p *connector.Peer) {
 func (w *World) CreateEntity() {
 	p := &pb.Entity{
 		Location:           &pb.RelativeLocation{X: 0, Y: 0, Z: 0},
-		Velocity:           &pb.Velocity{X: 0, Y: 0, Z: 0},
+		Velocity:           &pb.Velocity{X: 0.1, Y: 0, Z: 0},
 		Rotation:           &pb.Rotation{X: 0, Y: 0, Z: 0, W: 0},
-		RotationalVelocity: &pb.Velocity{X: 0, Y: 0, Z: 0},
+		RotationalVelocity: &pb.Velocity{X: 0.2, Y: 0, Z: -0.5},
 		Bodies: []*pb.Body{{
 			MeshID:      1,
 			Material:    1,
@@ -226,22 +236,57 @@ func (w *World) CreateEntity() {
 	w.Simulation.AddFromVEnt(p)
 }
 
+//CreateEntity2 creates an entity
+func (w *World) CreateEntity2() {
+	p := &pb.Entity{
+		Location:           &pb.RelativeLocation{X: 10, Y: 0, Z: 0},
+		Velocity:           &pb.Velocity{X: -2, Y: 0, Z: 0},
+		Rotation:           &pb.Rotation{X: 0, Y: 0, Z: 0, W: 0},
+		RotationalVelocity: &pb.Velocity{X: 0, Y: 1, Z: 0},
+		Bodies: []*pb.Body{{
+			MeshID:      1,
+			Material:    1,
+			FlatNormals: true,
+		}},
+	}
+	w.Chunks[0][0][0].addEntity(p)
+	w.Simulation.AddFromVEnt(p)
+}
+
 func (w *World) sendUpdates() {
 	for _, c := range w.LoadedChunks {
 		chunk := w.Chunks[c[0]][c[1]][c[2]]
 		updates := [][]byte{}
-		for _, e := range chunk.Entities {
+		for i, e := range chunk.Entities {
 			b, _ := proto.Marshal(&pb.Update{
 				Position: e.Location,
 				Rotation: e.Rotation,
+				Entity: &pb.EntityID{
+					Location: &pb.AbsoluteLocation{
+						X: c[0],
+						Y: c[1],
+						Z: c[2],
+					},
+					Id: uint64(i),
+				},
+				Velocity: &pb.Velocity{
+					X: e.Velocity.X,
+					Y: e.Velocity.Y,
+					Z: e.Velocity.Z,
+				},
+				RotationalVelocity: &pb.Velocity{
+					X: e.RotationalVelocity.X,
+					Y: e.RotationalVelocity.Y,
+					Z: e.RotationalVelocity.Z,
+				},
 			})
 			updates = append(updates, b)
 		}
-		for _, p := range chunk.Players {
-			for _, u := range updates {
-				go func(k []byte) {
-					p.Peer.SendUpdate(k)
-				}(u)
+		for _, u := range updates {
+			for _, p := range chunk.Players {
+				go func(l *Player, k []byte) {
+					l.Peer.SendUpdate(k)
+				}(p, u)
 			}
 		}
 	}

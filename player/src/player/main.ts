@@ -19,6 +19,9 @@ export default class Player {
   private lookchange: boolean;
   private inputs: any;
   private atmoColor: THREE.Color;
+  private clock: THREE.Clock;
+  private delta: number;
+  private interval: number;
   private atmoNear: number;
   private atmoFar: number;
   private atmo: boolean;
@@ -41,6 +44,9 @@ export default class Player {
     this.cameraPitch.add(this.camera);
     this.cameraYaw = new THREE.Object3D();
     this.cameraYaw.add(this.cameraPitch);
+    this.clock = new THREE.Clock();
+    this.delta = 0;
+    this.interval = 1 / 60;
     this.cameraYaw.position.z = 5;
     this.locked = false;
     this.lookchange = false;
@@ -98,8 +104,15 @@ export default class Player {
         this.connection!.startSession(data);
       });
   }
-  private animate = () => {
-    requestAnimationFrame(this.animate);
+  private pAnimate = () => {
+    requestAnimationFrame(this.pAnimate);
+    this.delta += this.clock.getDelta();
+    if (this.delta > this.interval) {
+      this.animate(this.delta);
+      this.delta = this.delta % this.interval;
+    }
+  }
+  private animate = (delta: number) => {
     if (this.inputs[87]) {
       this.cameraYaw.translateZ(-0.1);
     }
@@ -135,13 +148,14 @@ export default class Player {
       this.lookchange = false;
     }
     this.renderer.render(this.scene, this.camera);
+    this.world!.animate(delta);
   }
   private recvData = (message: MessageEvent) => {
     const resp: any = this.proto.Response!.decode(new Uint8Array(message.data));
     switch (resp.type) {
       case 2:
         this.world!.assignChunk(resp.chunk);
-        this.animate();
+        this.pAnimate();
         break;
       default:
         this.world!.resources.handleRequestResponse(resp);

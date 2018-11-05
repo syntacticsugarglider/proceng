@@ -63,10 +63,23 @@ export interface Update {
     y: number;
     z: number;
   };
+  velocity: {
+    x: number;
+    y: number;
+    z: number;
+  };
+  rotationalVelocity: {
+    x: number;
+    y: number;
+    z: number;
+  };
   rotation: {
     x: number;
     y: number;
     z: number;
     w: number;
+  };
+  entity: {
+    id: number;
   };
 }
