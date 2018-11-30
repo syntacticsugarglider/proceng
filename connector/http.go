@@ -78,7 +78,7 @@ func (c *Connector) connected(channel *webrtc.RTCDataChannel) {
 	channel.Lock()
 	defer channel.Unlock()
 
-	channel.OnOpen = func() {
+	channel.OnOpen(func() {
 		c.peersMutex.Lock()
 		m, ok := c.peers[channel]
 		if !ok {
@@ -89,20 +89,20 @@ func (c *Connector) connected(channel *webrtc.RTCDataChannel) {
 		m.channelPtr = channel
 		c.connectedCallback(c.peers[channel])
 		c.peersMutex.Unlock()
-	}
+	})
 
-	channel.Onmessage = func(payload datachannel.Payload) {
+	channel.Onmessage(func(payload datachannel.Payload) {
 		switch p := payload.(type) {
 		case *datachannel.PayloadBinary:
 			c.peers[channel].onMessageCallback(p.Data)
 		}
-	}
+	})
 }
 
 func (c *Connector) updateChannelConnected(peerChannel *webrtc.RTCDataChannel, updateChannel *webrtc.RTCDataChannel) {
 	updateChannel.Lock()
 	defer updateChannel.Unlock()
-	updateChannel.OnOpen = func() {
+	updateChannel.OnOpen(func() {
 		go func() {
 			c.peersMutex.Lock()
 			defer c.peersMutex.Unlock()
@@ -113,13 +113,13 @@ func (c *Connector) updateChannelConnected(peerChannel *webrtc.RTCDataChannel, u
 			c.peers[peerChannel].updateChannelPtr = updateChannel
 			c.peers[peerChannel].onUpdateCallback = func([]byte) {}
 		}()
-	}
-	updateChannel.Onmessage = func(payload datachannel.Payload) {
+	})
+	updateChannel.OnMessage(func(payload datachannel.Payload) {
 		switch p := payload.(type) {
 		case *datachannel.PayloadBinary:
 			c.peers[peerChannel].onUpdateCallback(p.Data)
 		}
-	}
+	})
 }
 
 func (c *Connector) disconnected(channel *webrtc.RTCDataChannel) {

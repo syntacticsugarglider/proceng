@@ -24,12 +24,12 @@ func rtcConnect(descriptor string, connected func(*webrtc.RTCDataChannel), disco
 	if err != nil {
 		return "", err
 	}
-	peerConnection.OnICEConnectionStateChange = func(i ice.ConnectionState) {
+	peerConnection.OnICEConnectionStateChange(func(i ice.ConnectionState) {
 		if i == ice.ConnectionStateClosed || i == ice.ConnectionStateDisconnected {
 			disconnected(channel)
 		}
-	}
-	peerConnection.OnDataChannel = func(d *webrtc.RTCDataChannel) {
+	})
+	peerConnection.OnDataChannel(func(d *webrtc.RTCDataChannel) {
 		if d.Label == "data" {
 			channel = d
 			connected(d)
@@ -37,7 +37,7 @@ func rtcConnect(descriptor string, connected func(*webrtc.RTCDataChannel), disco
 		if d.Label == "ud" {
 			updateChannelConnected(channel, d)
 		}
-	}
+	})
 
 	offer := webrtc.RTCSessionDescription{
 		Type: webrtc.RTCSdpTypeOffer,
