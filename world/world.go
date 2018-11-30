@@ -194,8 +194,12 @@ func (w *World) RemovePlayer(p *connector.Peer) {
 	go func() {
 		playersMutex.Lock()
 		defer playersMutex.Unlock()
-		delete(w.Chunks[w.Players[p].AbsoluteX][w.Players[p].AbsoluteY][w.Players[p].AbsoluteZ].Players, w.Players[p].Peer)
-		delete(w.Players, p)
+		if _, ok := w.Chunks[w.Players[p].AbsoluteX][w.Players[p].AbsoluteY][w.Players[p].AbsoluteZ].Players[w.Players[p].Peer]; ok {
+			delete(w.Chunks[w.Players[p].AbsoluteX][w.Players[p].AbsoluteY][w.Players[p].AbsoluteZ].Players, w.Players[p].Peer)
+		}
+		if _, ok := w.Players[p]; ok {
+			delete(w.Players, p)
+		}
 	}()
 }
 
