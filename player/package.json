@@ -13,7 +13,7 @@
     "espree": "^4.1.0",
     "protobuf-loader": "^0.0.8",
     "protobufjs": "^6.8.8",
-    "pug": "^2.0.3",
+    "pug": "^3.0.1",
     "pug-plain-loader": "^1.0.0",
     "three": "^0.98.0",
     "three.meshline": "^1.1.0",
