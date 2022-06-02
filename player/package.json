@@ -12,7 +12,7 @@
     "escodegen": "^1.11.0",
     "espree": "^4.1.0",
     "protobuf-loader": "^0.0.8",
-    "protobufjs": "^6.8.8",
+    "protobufjs": "^6.11.3",
     "pug": "^2.0.3",
     "pug-plain-loader": "^1.0.0",
     "three": "^0.98.0",
